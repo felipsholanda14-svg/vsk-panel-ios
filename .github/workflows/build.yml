@@ -1,0 +1,41 @@
+name: Gerar IPA Sem Mac
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-ipa:
+    runs-on: macos-latest
+    steps:
+      - name: Obter ficheiros do repositório
+        uses: actions/checkout@v4
+
+      - name: Criar projeto Xcode automaticamente
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Compilar aplicação para iOS (Sem assinatura prévia)
+        run: |
+          xcodebuild -project VSKPanel.xcodeproj \
+            -scheme VSKPanel \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Empacotar em ficheiro .ipa
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/VSKPanel.app Payload/
+          zip -r VSKPanel.ipa Payload
+
+      - name: Disponibilizar VSKPanel.ipa para transferência
+        uses: actions/upload-artifact@v4
+        with:
+          name: VSKPanel-IPA
+          path: VSKPanel.ipa
